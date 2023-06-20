@@ -1,0 +1,56 @@
+#include <iostream>
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+
+int main() {
+    av_register_all();
+
+    const char* videoPath = "caminho/do/seu/video.mp4";
+
+    AVFormatContext* formatContext = nullptr;
+
+    int result = avformat_open_input(&formatContext, videoPath, nullptr, nullptr);
+    if (result != 0) {
+        std::cerr << "Erro ao abrir o arquivo de vídeo." << std::endl;
+        return -1;
+    }
+
+    result = avformat_find_stream_info(formatContext, nullptr);
+    if (result < 0) {
+        std::cerr << "Erro ao encontrar informações do fluxo de vídeo." << std::endl;
+        avformat_close_input(&formatContext);
+        return -1;
+    }
+
+    AVCodecParameters* codecParams = formatContext->streams[0]->codecpar;
+    AVCodec* codec = avcodec_find_decoder(codecParams->codec_id);
+    if (!codec) {
+        std::cerr << "Codec de vídeo não encontrado." << std::endl;
+        avformat_close_input(&formatContext);
+        return -1;
+    }
+
+    AVCodecContext* codecContext = avcodec_alloc_context3(codec);
+    if (!codecContext) {
+        std::cerr << "Erro ao alocar o contexto do codec." << std::endl;
+        avformat_close_input(&formatContext);
+        return -1;
+    }
+
+    result = avcodec_parameters_to_context(codecContext, codecParams);
+    if (result < 0) {
+        std::cerr << "Erro ao copiar os parâmetros do codec para o contexto." << std::endl;
+        avcodec_free_context(&codecContext);
+        avformat_close_input(&formatContext);
+        return -1;
+    }
+
+    std::cout << "Codec de vídeo: " << codec->name << std::endl;
+    std::cout << "Largura do vídeo: " << codecParams->width << std::endl;
+    std::cout << "Altura do vídeo: " << codecParams->height << std::endl;
+
+    avcodec_free_context(&codecContext);
+    avformat_close_input(&formatContext);
+
+    return 0;
+}
